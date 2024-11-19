@@ -18,7 +18,8 @@ RUN python3 -m venv /opt/venv && \
     requests \
     beautifulsoup4 \
     Pillow \
-    humanize
+    humanize \
+    cryptography
 
 # Add the virtual environment to PATH so it is used by default
 ENV PATH="/opt/venv/bin:$PATH"
