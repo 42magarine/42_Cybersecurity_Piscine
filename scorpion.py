@@ -6,15 +6,18 @@
 #    By: maott <maott@student.42.fr>                +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/11/18 20:22:09 by maott             #+#    #+#              #
-#    Updated: 2024/11/18 20:43:46 by maott            ###   ########.fr        #
+#    Updated: 2024/11/19 10:14:00 by maott            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os
 import sys
+import stat
+import time
+import humanize
 from PIL import Image
 from PIL.ExifTags import TAGS
-from datetime import datetime
+from pathlib import Path
 
 RESET = "\033[0m"
 RED = "\033[31m"
@@ -23,14 +26,16 @@ YELLOW = "\033[33m"
 
 def get_exif_data(image_path):
     try:
+        # Open the image file
         image = Image.open(image_path)
-        exif_data = image._getexif()
+        exif_data = image._getexif()    # Retrieve EXIF data
         if not exif_data:
             return None
 
+        # Create a dictionary to store EXIF metadata
         metadata = {}
         for tag, value in exif_data.items():
-            tag_name = TAGS.get(tag, tag)
+            tag_name = TAGS.get(tag, tag)   # Get human-readable tag names
             metadata[tag_name] = value
 
         return metadata
@@ -39,30 +44,37 @@ def get_exif_data(image_path):
         print(f"{RED}Error reading EXIF data from {image_path}: {e}{RESET}")
         return None
 
-def get_file_creation_date(image_path):
+def get_file_metadata(image_path):
     try:
-        # Get the creation date from the file system metadata
-        creation_timestamp = os.path.getctime(image_path)
-        creation_date = datetime.fromtimestamp(creation_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        metadata = {}
+        file_path = Path(image_path)
+        
+        # Populate metadata dictionary with file details
+        metadata['Filename'] = file_path.name
+        metadata['Directory'] = str(file_path.resolve().parent)
+        metadata['File Size'] = humanize.naturalsize(file_path.stat().st_size, binary=True)
+        metadata['Creation Date'] = time.ctime(os.path.getctime(image_path))
+        metadata['Modification Date'] = time.ctime(os.path.getmtime(image_path))
+        metadata['File Permissions'] = stat.filemode(os.stat(image_path).st_mode)
 
-        return creation_date
+        return metadata
 
     except Exception as e:
-        print(f"{RED}Error getting file creation date for {image_path}: {e}{RESET}")
+        print(f"{RED}Error getting metadata for {image_path}: {e}{RESET}")
         return None
 
 def display_metadata(image_path):
-    print(f"{GREEN}File: {image_path}{RESET}")
-
     # Display basic file metadata
-    creation_date = get_file_creation_date(image_path)
-    if creation_date:
-        print(f"{GREEN}Creation Date: {creation_date}{RESET}")
+    metadata = get_file_metadata(image_path)
+    if metadata:
+        print(f"{YELLOW}Basic File Metadata:{RESET}")
+        for key, value in metadata.items():
+            print(f"{GREEN}{key}: {value}{RESET}")
 
     # Display EXIF (Exchangeable Image File Format) data
     exif_data = get_exif_data(image_path)
     if exif_data:
-        print(f"{GREEN}EXIF Data: {RESET}")
+        print(f"{YELLOW}EXIF Data:{RESET}")
         for tag, value in exif_data.items():
             print(f"{GREEN}{tag}: {value}{RESET}")
     else:
