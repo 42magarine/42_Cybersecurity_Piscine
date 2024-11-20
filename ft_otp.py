@@ -14,12 +14,12 @@
 
 import argparse
 import os
-import re   # regular expression
+import re
 import time
 import struct
-import hashlib
 import hmac
-from cryptography.fernet import Fernet
+import hashlib
+import base64
 
 RESET = "\033[0m"
 RED = "\033[31m"
@@ -27,34 +27,7 @@ GREEN = "\033[32m"
 YELLOW = "\033[33m"
 
 FT_OTP_KEY_FILE = "ft_otp.key"
-FERNET_KEY_FILE = ".fernet.key"
 TIME_STEP = 30
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="ft_otp")
-
-    # Create a mutually exclusive group for -g and -k
-    group = parser.add_mutually_exclusive_group(required=True)
-
-    group.add_argument('-g', metavar='[FILE]', type=str, help='Generates an encrypted ft_otp.key file')
-    group.add_argument('-k', metavar='[FILE]', type=str, help='Generates a one-time password using the ft_otp.key file')
-
-    args = parser.parse_args()
-
-    if args.g:
-        file_path = args.g
-    elif args.k:
-        file_path = args.k
-
-    if not os.path.isfile(file_path):
-        print(f"{RED}Error: '{file_path}' is not a valid file path or does not exist.{RESET}")
-        exit(1)
-
-    if not os.access(file_path, os.R_OK):
-        print(f"{RED}Error: '{file_path}' is not readable. Check permissions.{RESET}")
-        exit(1)
-
-    return args, file_path
 
 def validate_hex_key(file_path):
     try:
@@ -75,88 +48,89 @@ def validate_hex_key(file_path):
 
     return hex_key
 
-def read_file(file_path, mode="rb"):
+def encrypt_and_store_key(hex_key):
+    hex_key_bytes = bytes.fromhex(hex_key)
+    encoded_key = base64.urlsafe_b64encode(hex_key_bytes)
+
     try:
-        with open(file_path, mode) as file:
-            return file.read()
+        with open(FT_OTP_KEY_FILE, 'wb') as file:
+            file.write(encoded_key)
+
+    except Exception as e:
+        print(f"{RED}Error: Could not write to file '{FT_OTP_KEY_FILE}': {e}{RESET}")
+        exit(1)
+
+    print(f"{GREEN}Key was successfully saved in {FT_OTP_KEY_FILE}.{RESET}")
+
+def decrypt_key(file_path):
+    try:
+        with open(file_path, 'rb') as file:
+            encoded_key = file.read().strip()
 
     except Exception as e:
         print(f"{RED}Error: Could not read from file '{file_path}': {e}{RESET}")
         exit(1)
 
-def write_file(file_path, data, mode="wb"):
-    try:
-        with open(file_path, mode) as file:
-            file.write(data)
+    hex_key_bytes = base64.urlsafe_b64decode(encoded_key)
 
-    except Exception as e:
-        print(f"{RED}Error: Could not write to file '{file_path}': {e}{RESET}")
-        exit(1)
+    return hex_key_bytes
 
-def encrypt_hex_key(hex_key):
-    # Check if the Fernet key exists, if not, create a new one
-    if os.path.exists(FERNET_KEY_FILE):
-        print(f"{GREEN}Found existing Fernet key file. Using the existing key.{RESET}")
-        fernet_key = read_file(FERNET_KEY_FILE)
-    else:
-        fernet_key = Fernet.generate_key()
-        write_file(FERNET_KEY_FILE, fernet_key)
-        print(f"{GREEN}New Fernet key generated and saved in {FERNET_KEY_FILE}.{RESET}")
+def generate_otp(hex_key_bytes):
+    time_step = int(time.time() // TIME_STEP)
+    time_bytes = struct.pack(">Q", time_step)
 
-    # Encrypt the hexadecimal key using the Fernet key
-    cipher = Fernet(fernet_key)
-    encrypted_key = cipher.encrypt(hex_key.encode())
-    write_file(FT_OTP_KEY_FILE, encrypted_key)
-    print(f"{GREEN}Key was successfully saved in {FT_OTP_KEY_FILE}.{RESET}")
-
-def decrypt_hex_key(file_path):
-    # Ensure Fernet key file exists
-    if not os.path.isfile(FERNET_KEY_FILE):
-        print(f"{RED}Error: '{FERNET_KEY_FILE}' is missing. Please generate a key first using the -g option.{RESET}")
-        exit(1)
-
-    # Read the Fernet key and the encrypted hex key
-    fernet_key = read_file(FERNET_KEY_FILE)
-    encrypted_key = read_file(file_path)
-
-    # Decrypt the hex key
-    cipher = Fernet(fernet_key)
-    hex_key = cipher.decrypt(encrypted_key).decode()
-
-    return hex_key
-
-def generate_totp(hex_key):
-
-    hex_key_bytes = bytes.fromhex(hex_key)
-
-    current_time = int(time.time() // TIME_STEP)
-    print(current_time)
-
-    time_bytes = struct.pack(">Q", current_time)
-    print(time_bytes)
-
+    # Step 1: Generate an HMAC-SHA-1 value (a 20-byte string)
     hmac_sha1 = hmac.new(hex_key_bytes, time_bytes, hashlib.sha1)
-    print(hmac_sha1)
-
     hmac_sha1_bytes = hmac_sha1.digest()
-    print(hmac_sha1_bytes)
 
+    # Step 2: Generate a 4-byte string (Dynamic Truncation)
     offset = hmac_sha1_bytes[-1] & 0x0F
-    print(offset)
+    bin_code = (hmac_sha1_bytes[offset] & 0x7F) << 24 \
+           | (hmac_sha1_bytes[offset + 1] & 0xFF) << 16 \
+           | (hmac_sha1_bytes[offset + 2] & 0xFF) << 8 \
+           | (hmac_sha1_bytes[offset + 3] & 0xFF)
 
-    code = struct.unpack(">I", hmac_sha1_bytes[offset:offset + 4])[0] & 0x7FFFFFFF
-    print(code)
+    otp = bin_code % (10 ** 6)
+    otp = str(otp).zfill(6)
 
-    totp = code % (10 ** 6)
-    print(totp)
+    return otp
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="ft_otp")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-g', metavar='[FILE]', type=str, help='Generates and saves an encrypted ft_otp.key file')
+    group.add_argument('-k', metavar='[FILE]', type=str, help='Generates a one-time password using the ft_otp.key file')
+
+    args = parser.parse_args()
+
+    if args.g:
+        file_path = args.g
+    elif args.k:
+        file_path = args.k
+
+    if not os.path.isfile(file_path):
+        print(f"{RED}Error: '{file_path}' is not a valid file path or does not exist.{RESET}")
+        exit(1)
+
+    if not os.access(file_path, os.R_OK):
+        print(f"{RED}Error: '{file_path}' is not readable. Check permissions.{RESET}")
+        exit(1)
+
+    return args, file_path
 
 def main():
     args, file_path = parse_arguments()
 
     if args.g:
-        encrypt_hex_key(validate_hex_key(file_path))
+        hex_key = validate_hex_key(file_path)
+        encrypt_and_store_key(hex_key)
+
     elif args.k:
-        generate_totp(decrypt_hex_key(file_path))
+        hex_key = decrypt_key(file_path)
+        otp = generate_otp(hex_key)
+
+        print(f"{GREEN}{otp}{RESET}")
 
 if __name__ == "__main__":
     main()
