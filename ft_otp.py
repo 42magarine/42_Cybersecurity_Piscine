@@ -88,7 +88,7 @@ def write_file(file_path, data, mode="wb"):
         print(f"{RED}Error: Could not write to file '{file_path}': {e}{RESET}")
         exit(1)
 
-def generate_key(hex_key):
+def encrypt_hex_key(hex_key):
     # Check if the Fernet key exists, if not, create a new one
     if os.path.exists(FERNET_KEY_FILE):
         print(f"{GREEN}Found existing Fernet key file. Using the existing key.{RESET}")
@@ -104,7 +104,7 @@ def generate_key(hex_key):
     write_file(FT_OTP_KEY_FILE, encrypted_key)
     print(f"{GREEN}Key was successfully saved in {FT_OTP_KEY_FILE}.{RESET}")
 
-def generate_otp(file_path):
+def decrypt_hex_key(file_path):
     # Ensure Fernet key file exists
     if not os.path.isfile(FERNET_KEY_FILE):
         print(f"{RED}Error: '{FERNET_KEY_FILE}' is missing. Please generate a key first using the -g option.{RESET}")
@@ -118,16 +118,18 @@ def generate_otp(file_path):
     cipher = Fernet(fernet_key)
     hex_key = cipher.decrypt(encrypted_key).decode()
 
-    print(f"Decrypted key: {hex_key}")
+    return hex_key
+
+def generate_otp(file_path):
+    
 
 def main():
     args, file_path = parse_arguments()
 
     if args.g:
-        hex_key = validate_hex_key(file_path)
-        generate_key(hex_key)
+        encrypt_hex_key(validate_hex_key(file_path))
     elif args.k:
-        generate_otp(file_path)
+        generate_otp(decrypt_hex_key(file_path))
 
 if __name__ == "__main__":
     main()
