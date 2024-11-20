@@ -76,21 +76,34 @@ def decrypt_key(file_path):
     return hex_key_bytes
 
 def generate_otp(hex_key_bytes):
+    # Step 1: Generate the time counter value
+    # The time step is calculated by dividing the current time (in seconds) by the time window size.
+    # This gives a counter that will increment with each time period.
     time_step = int(time.time() // TIME_STEP)
-    time_bytes = struct.pack(">Q", time_step)
+    time_bytes = struct.pack(">Q", time_step)   # Pack the time step into an 8-byte big-endian representation
 
-    # Step 1: Generate an HMAC-SHA-1 value (a 20-byte string)
+    # Step 2: Perform HMAC-SHA1 on the time counter with the secret key
+    # We use the key (hex_key_bytes) and the time_bytes as the message for HMAC-SHA1.
+    # HMAC-SHA1 is a cryptographic hash function that produces a 20-byte output.
     hmac_sha1 = hmac.new(hex_key_bytes, time_bytes, hashlib.sha1)
-    hmac_sha1_bytes = hmac_sha1.digest()
+    hmac_sha1_bytes = hmac_sha1.digest()    # Get the raw 20-byte result of the HMAC operation
 
-    # Step 2: Generate a 4-byte string (Dynamic Truncation)
-    offset = hmac_sha1_bytes[-1] & 0x0F
+    # Step 3: Extract a dynamic offset and convert the HMAC result into a 32-bit integer
+    # The last byte of the HMAC result determines the "offset" from where we start extracting the 4-byte code.
+    offset = hmac_sha1_bytes[-1] & 0x0F # The last 4 bits of the last byte determine the offset (0-15)
+
+    # Combine 4 bytes starting from the offset to form a 32-bit integer. This is the "binary code".
+    # We mask the bytes to ensure proper values for each byte and then shift them to their correct positions.
     bin_code = (hmac_sha1_bytes[offset] & 0x7F) << 24 \
            | (hmac_sha1_bytes[offset + 1] & 0xFF) << 16 \
            | (hmac_sha1_bytes[offset + 2] & 0xFF) << 8 \
            | (hmac_sha1_bytes[offset + 3] & 0xFF)
 
+    # Step 4: Apply a modulus operation to ensure a 6-digit OTP
+    # The binary code is reduced modulo 10^6 to produce a 6-digit OTP.
     otp = bin_code % (10 ** 6)
+
+    # Step 5: Format the OTP as a 6-digit string, padding with leading zeros if necessary
     otp = str(otp).zfill(6)
 
     return otp
