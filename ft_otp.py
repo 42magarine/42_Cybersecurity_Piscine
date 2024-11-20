@@ -15,6 +15,10 @@
 import argparse
 import os
 import re   # regular expression
+import time
+import struct
+import hashlib
+import hmac
 from cryptography.fernet import Fernet
 
 RESET = "\033[0m"
@@ -24,6 +28,7 @@ YELLOW = "\033[33m"
 
 FT_OTP_KEY_FILE = "ft_otp.key"
 FERNET_KEY_FILE = ".fernet.key"
+TIME_STEP = 30
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="ft_otp")
@@ -120,8 +125,30 @@ def decrypt_hex_key(file_path):
 
     return hex_key
 
-def generate_otp(file_path):
-    
+def generate_totp(hex_key):
+
+    hex_key_bytes = bytes.fromhex(hex_key)
+
+    current_time = int(time.time() // TIME_STEP)
+    print(current_time)
+
+    time_bytes = struct.pack(">Q", current_time)
+    print(time_bytes)
+
+    hmac_sha1 = hmac.new(hex_key_bytes, time_bytes, hashlib.sha1)
+    print(hmac_sha1)
+
+    hmac_sha1_bytes = hmac_sha1.digest()
+    print(hmac_sha1_bytes)
+
+    offset = hmac_sha1_bytes[-1] & 0x0F
+    print(offset)
+
+    code = struct.unpack(">I", hmac_sha1_bytes[offset:offset + 4])[0] & 0x7FFFFFFF
+    print(code)
+
+    totp = code % (10 ** 6)
+    print(totp)
 
 def main():
     args, file_path = parse_arguments()
@@ -129,7 +156,7 @@ def main():
     if args.g:
         encrypt_hex_key(validate_hex_key(file_path))
     elif args.k:
-        generate_otp(decrypt_hex_key(file_path))
+        generate_totp(decrypt_hex_key(file_path))
 
 if __name__ == "__main__":
     main()
