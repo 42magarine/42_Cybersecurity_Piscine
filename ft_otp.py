@@ -40,7 +40,7 @@ def validate_hex_key(file_path):
         exit(1)
 
     # Ensure the key is a valid 64-character hexadecimal string.
-    if len(hex_key) < 64 or not re.fullmatch(r'[0-9a-fA-F]+', hex_key):
+    if len(hex_key) < 64 or not re.fullmatch(r'[0-9a-fA-F]+', hex_key) or len(hex_key) % 2 != 0:
         print(f"{RED}Error: Key must be at least 64 hexadecimal characters.{RESET}")
         exit(1)
 
@@ -63,6 +63,10 @@ def encrypt_and_store_key(hex_key):
 
 # Decrypts the key from the stored file.
 def decrypt_key(file_path):
+    if file_path != FT_OTP_KEY_FILE:
+        print(f"{RED}Error: Wrong file, '{FT_OTP_KEY_FILE}'{RESET} is required.")
+        exit(1)
+
     try:
         with open(file_path, 'rb') as file:
             encoded_key = file.read().strip()
