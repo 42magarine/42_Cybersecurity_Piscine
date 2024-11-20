@@ -9,6 +9,17 @@ services:
       - ./nginx/html:/usr/share/nginx/html:ro
     restart: always
 
-# docker-compose up -d
-# docker-compose down
-# docker-compose restart nginx
+  tor:
+    build:
+      context: ./tor
+    container_name: tor-container
+    ports:
+      - "4243:4242"
+    volumes:
+      - ./tor/torrc:/etc/tor/torrc:ro
+      - tor-data:/var/lib/tor/hidden_service
+    restart: always
+    command: tor -f /etc/tor/torrc
+
+volumes:
+  tor-data:
