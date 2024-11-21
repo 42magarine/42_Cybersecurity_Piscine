@@ -1,25 +1,24 @@
 services:
+
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     container_name: nginx-container
     ports:
       - "8080:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/html:/usr/share/nginx/html:ro
-    restart: always
+      - ./html:/usr/share/nginx/html:ro
+    depends_on:
+      - tor
 
   tor:
     build:
       context: ./tor
+      dockerfile: Dockerfile
     container_name: tor-container
     ports:
       - "4243:4242"
     volumes:
       - ./tor/torrc:/etc/tor/torrc:ro
-      - tor-data:/var/lib/tor/hidden_service
-    restart: always
-    command: tor -f /etc/tor/torrc
-
-volumes:
-  tor-data:
