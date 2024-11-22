@@ -1,7 +1,7 @@
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include <stdio.h>      // puts(), printf(), scanf(), fflush()
+#include <stdlib.h>     // exit() atoi()
+#include <string.h>     // memset(), strlen(), strcmp()
+#include <stdbool.h>    // bool
 
 void no(void) {
   puts("Nope.");
