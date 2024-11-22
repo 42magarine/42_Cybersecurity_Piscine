@@ -1,9 +1,22 @@
-FROM alpine:latest
+FROM ubuntu:latest
 
-RUN apk add --no-cache \
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies: python, pip and venv
+RUN apt update && apt install -y --no-install-recommends \
     python3 \
-    py3-pip \
-    libsodium
+    python3-pip \
+    python3-venv \
+    libsodium-dev \
+    && apt clean && rm -rf /var/lib/apt/lists/*
+
+# Create a virtual environment and install python libraries
+RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir \
+    pynacl
+
+# Add the virtual environment to PATH so it is used by default
+ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /root
 
