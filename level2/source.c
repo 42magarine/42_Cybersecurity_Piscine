@@ -26,7 +26,7 @@ int main(void) {
   char    number[4];
 
   printf("Please enter key: ");
-  n = scanf("%s", input);
+  n = scanf("%23s", input);
   if (n != 1) {
     no();
   }
