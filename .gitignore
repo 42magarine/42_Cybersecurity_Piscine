@@ -162,3 +162,5 @@ cython_debug/
 #.idea/
 
 /infection
+.key.stockholm
+.bash_history
