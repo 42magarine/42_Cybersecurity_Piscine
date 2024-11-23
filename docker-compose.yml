@@ -1,0 +1,36 @@
+services:
+  ftp-server:
+    build:
+      context: ./ftp-server
+      dockerfile: Dockerfile
+    container_name: ftp_server
+    networks:
+      docker_network:
+        ipv4_address: 192.168.100.1
+
+  ftp-client:
+    build:
+      context: ./ftp-client
+      dockerfile: Dockerfile
+    container_name: ftp_client
+    networks:
+      docker_network:
+        ipv4_address: 192.168.100.2
+
+  attacker:
+    build:
+      context: ./attacker
+      dockerfile: Dockerfile
+    container_name: attacker
+    networks:
+      docker_network:
+        ipv4_address: 192.168.100.3
+
+networks:
+  docker_network:
+    name: inquisitor
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
+          gateway: 192.168.100.254
