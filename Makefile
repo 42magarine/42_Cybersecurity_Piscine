@@ -21,7 +21,7 @@ down:
 logs:
 	docker-compose logs -f
 
-network:
+nls:
 	docker network ls
 
 clean:
