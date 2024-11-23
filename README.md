@@ -1,6 +1,19 @@
 # stockholm
 
+Harmless malware
+
+usage: stockholm.py [-h] [-v] [-r KEY_FILE] [-s]
+
+options:
+  -h, --help                        show this help message and exit
+  -v, --version                     show the version of the program.
+  -r KEY_FILE, --reverse KEY_FILE   path to the key file to reverse the infection.
+  -s, --silent                      run the program without producing any output..
+
+
+
 Here’s a breakdown of how WannaCry handled the encryption and decryption process:
+
 1. Encryption with AES:
 
     WannaCry used AES (Advanced Encryption Standard) in CBC mode (Cipher Block Chaining) to encrypt the files on the victim’s machine.
@@ -26,4 +39,3 @@ Since the victim only has the RSA-encrypted AES key, they cannot decrypt it beca
     The victim was instructed to pay the ransom (in Bitcoin), and once the payment was made, the attacker would send the victim the RSA private key (or a decryption key) that would allow them to decrypt the AES key.
     Once the victim gets the RSA private key, they can decrypt the AES key (because only the RSA private key can decrypt the AES-encrypted AES key).
     After recovering the AES key, the victim could then use it to decrypt their files (since the AES key is what was used to encrypt the files in the first place).
-    
