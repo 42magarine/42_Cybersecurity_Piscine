@@ -8,7 +8,7 @@ services:
       - "2121:21"
       - "30000-30009:30000-30009"
     volumes:
-      - ./ftp-server/files:/ftp-server/files
+      - ./ftp-server/files:/root
     networks:
       docker_network:
         ipv4_address: 192.168.42.1
@@ -19,7 +19,7 @@ services:
       dockerfile: Dockerfile
     container_name: ftp_client
     volumes:
-      - ./ftp-client/files:/ftp-client/files
+      - ./ftp-client/files:/root
     networks:
       docker_network:
         ipv4_address: 192.168.42.2

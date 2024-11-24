@@ -1,12 +1,10 @@
 FROM ubuntu:latest
 
-WORKDIR /ftp-client/files
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt update && apt install -y --no-install-recommends \
     ftp \
-    iputils-ping \
     net-tools \
-    && apt-get clean \
+    iputils-ping \
+    && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Keep container alive

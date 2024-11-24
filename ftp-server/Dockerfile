@@ -1,26 +1,21 @@
 FROM ubuntu:latest
 
-WORKDIR /ftp-server/files
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt update && apt install -y --no-install-recommends \
     vsftpd \
-    iputils-ping \
     net-tools \
+    iputils-ping \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd -m user1 \
+    && echo "user1:user1" | chpasswd \
+    && useradd -m user2 \
+    && echo "user2:user2" | chpasswd
+
+RUN mkdir -p /var/ftp \
+    && mkdir -p /var/run/vsftpd/empty
+
 COPY vsftpd.conf /etc/vsftpd.conf
-
-RUN mkdir -p /var/run/vsftpd/empty \
-    && chmod 755 /var/run/vsftpd/empty
-
-RUN adduser --disabled-password --gecos "" ftpuser \
-    && echo "ftpuser:ftp123" | chpasswd \
-    && usermod -d /ftp-server/files ftpuser
-
-RUN mkdir -p /ftp-server/files \
-    && chown -R ftpuser:ftpuser /ftp-server/files \
-    && chmod -R 755 /ftp-server/files
 
 EXPOSE 21
 
