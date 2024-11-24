@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpcap0.8 \
     libpcap-dev \
     iproute2 \
+    iputils-ping \
     net-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -24,4 +25,7 @@ RUN pip install --no-cache-dir \
     scapy
 
 # Copy the ARP poisoning script
-# COPY inquisitor.py /inquisitor.py
+COPY inquisitor.py /inquisitor.py
+
+# Keep container alive for testing
+CMD ["tail", "-f", "/dev/null"]

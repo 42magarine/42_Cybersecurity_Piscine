@@ -1,17 +1,27 @@
 FROM ubuntu:latest
 
-WORKDIR /
+WORKDIR /ftp-server/files
 
-# Update and install vsftpd
 RUN apt-get update && apt-get install -y --no-install-recommends \
     vsftpd \
-    && mkdir -p /var/ftp \
-    && chmod -R 755 /var/ftp \
+    iputils-ping \
+    net-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the vsftpd configuration file into the container
 COPY vsftpd.conf /etc/vsftpd.conf
 
-# Expose the FTP port (default is 21)
+RUN mkdir -p /var/run/vsftpd/empty \
+    && chmod 755 /var/run/vsftpd/empty
+
+RUN adduser --disabled-password --gecos "" ftpuser \
+    && echo "ftpuser:ftp123" | chpasswd \
+    && usermod -d /ftp-server/files ftpuser
+
+RUN mkdir -p /ftp-server/files \
+    && chown -R ftpuser:ftpuser /ftp-server/files \
+    && chmod -R 755 /ftp-server/files
+
 EXPOSE 21
+
+CMD ["/usr/sbin/vsftpd", "/etc/vsftpd.conf"]
