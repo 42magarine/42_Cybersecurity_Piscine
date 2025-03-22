@@ -1,0 +1,11 @@
+# Configures the SSH server to listen on port 4242.
+Port 4242
+
+# Enables password-based authentication.
+PasswordAuthentication yes
+
+# Allows root login over SSH.
+PermitRootLogin yes
+
+# Disables additional challenge-response authentication to simplify login.
+ChallengeResponseAuthentication no
