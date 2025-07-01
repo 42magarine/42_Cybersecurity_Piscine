@@ -1,0 +1,8 @@
+# Specifies the directory where Tor stores private keys and the hostname for the hidden service.
+HiddenServiceDir /var/lib/tor/hidden_service/
+
+# Maps the hidden service port 80 to the Nginx container's port 80, allowing the website to be accessed via .onion.
+HiddenServicePort 80 nginx:80
+
+# Maps the hidden service port 4242 to the Nginx container's SSH port, allowing SSH access via .onion.
+HiddenServicePort 4242 nginx:4242
